@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useState, useRef } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useRoom } from "../context/RoomContext";
 import { useSocket } from "../hooks/useSocket";
 import { useUser } from "../context/UserContext";
+import Editor from "@monaco-editor/react";
 
 interface Problem {
   title: string;
   description: string;
   difficulty: string;
   test_cases: { input: any; output: any }[];
+  function_template?: string;
 }
 
 const ProblemDetail = () => {
@@ -17,10 +19,15 @@ const ProblemDetail = () => {
   const decodedTitle = decodeURIComponent(title || "");
   const [problem, setProblem] = useState<Problem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [code, setCode] = useState("");
+  const [runResult, setRunResult] = useState<any>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [showCompletionBanner, setShowCompletionBanner] = useState(false);
 
   const { room, setRoom } = useRoom();
   const socket = useSocket();
   const { user } = useUser();
+  const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
   // Fetch problem from backend
@@ -34,6 +41,7 @@ const ProblemDetail = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setProblem(res.data);
+        setCode(res.data.function_template || "");
       } catch (err) {
         console.error("Error fetching problem:", err);
       } finally {
@@ -88,6 +96,40 @@ const ProblemDetail = () => {
     }
   };
 
+  const handleRunCode = async (isSubmit: boolean = false) => {
+    if (!problem || !user) return;
+
+    setIsRunning(true);
+    setRunResult(null);
+
+    try {
+      const res = await axios.post(
+        "http://127.0.0.1:8000/api/code/run",
+        {
+          code,
+          problem_title: problem.title,
+          user_id: user.id,
+          room_code: room?.code,
+          is_submit: isSubmit
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setRunResult(res.data);
+
+      // If it's a submit and user completed the problem
+      if (isSubmit && res.data.all_passed && room) {
+        setShowCompletionBanner(true);
+        setTimeout(() => setShowCompletionBanner(false), 5000);
+      }
+    } catch (err) {
+      console.error("Error running code:", err);
+      setRunResult({ error: "Failed to run code" });
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
 
   if (loading) {
     return (
@@ -107,6 +149,12 @@ const ProblemDetail = () => {
 
   return (
     <div className="min-h-screen bg-[#1E1E1E] text-white flex relative">
+      {/* Completion Banner */}
+      {showCompletionBanner && (
+        <div className="fixed top-0 left-0 right-0 z-50 bg-green-600 text-white p-4 text-center font-bold text-xl animate-pulse">
+          🎉 Congratulations! You completed the problem! 🎉
+        </div>
+      )}
       {/* Leaderboard - Fixed position corner overlay when game is active */}
       {room && room.started && (
         <div className="fixed top-4 right-4 w-64 bg-[#1A1A1A] border border-gray-600 rounded-lg p-4 shadow-xl z-50">
@@ -158,6 +206,8 @@ const ProblemDetail = () => {
                   socket.emit("leave_room", { roomCode: room.code });
                 }
                 setRoom(null);
+                // Navigate back to problems page
+                navigate("/problems");
               } catch (err) {
                 console.error("Error leaving room:", err);
               }
@@ -202,7 +252,7 @@ const ProblemDetail = () => {
           Test Cases
         </h2>
         <ul className="space-y-4">
-          {problem.test_cases.map((tc, idx) => (
+          {problem.test_cases.slice(0, 3).map((tc, idx) => (
             <li
               key={idx}
               className="p-4 bg-[#2D2D2D] rounded-lg border border-gray-600 shadow-md hover:border-blue-500 transition"
@@ -307,6 +357,8 @@ const ProblemDetail = () => {
                             { headers: { Authorization: `Bearer ${token}` } }
                           );
                           setRoom(null);
+                          // Navigate back to problems page
+                          navigate("/problems");
                         } catch (err) {
                           console.error("Error leaving room:", err);
                         }
@@ -324,18 +376,74 @@ const ProblemDetail = () => {
       </div>
 
       {/* Right: Editor */}
-      <div className="w-1/2 p-6 bg-[#1E1E1E]">
-        <div className="bg-[#2D2D2D] border border-gray-600 rounded-lg h-full flex flex-col shadow-lg">
+      <div className="w-1/2 p-6 bg-[#1E1E1E] flex flex-col">
+        <div className="bg-[#2D2D2D] border border-gray-600 rounded-lg flex-grow flex flex-col shadow-lg">
           <div className="p-4 border-b border-gray-600 flex justify-between items-center">
             <span className="font-semibold text-white">Code Editor</span>
-            <button className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm font-semibold text-white shadow-md transition">
-              Run Code
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleRunCode(false)}
+                disabled={isRunning}
+                className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 px-4 py-2 rounded text-sm font-semibold text-white shadow-md transition"
+              >
+                {isRunning ? "Running..." : "Run Code"}
+              </button>
+              <button
+                onClick={() => handleRunCode(true)}
+                disabled={isRunning}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-green-400 px-4 py-2 rounded text-sm font-semibold text-white shadow-md transition"
+              >
+                {isRunning ? "Submitting..." : "Submit"}
+              </button>
+            </div>
           </div>
-          <textarea
-            className="flex-grow bg-[#2D2D2D] text-gray-100 p-4 font-mono text-sm resize-none outline-none leading-relaxed"
-            placeholder={`// Write your solution here...\nfunction solve() {\n  // your code\n}`}
-          ></textarea>
+          <div className="flex-grow">
+            <Editor
+              height="60%"
+              defaultLanguage="python"
+              value={code}
+              onChange={(value) => setCode(value || "")}
+              theme="vs-dark"
+              options={{
+                fontSize: 14,
+                minimap: { enabled: false },
+                scrollBeyondLastLine: false,
+                automaticLayout: true
+              }}
+            />
+          </div>
+          {/* Results section */}
+          {runResult && (
+            <div className="p-4 border-t border-gray-600 bg-[#1A1A1A] max-h-48 overflow-y-auto">
+              {runResult.error ? (
+                <div className="text-red-400">
+                  <p className="font-semibold">Error:</p>
+                  <p className="font-mono text-sm">{runResult.error}</p>
+                </div>
+              ) : runResult.passed === false ? (
+                <div className="text-red-400">
+                  <p className="font-semibold">
+                    Failed at test case {runResult.failed_at} ({runResult.passed_tests}/{runResult.total_tests} passed)
+                  </p>
+                  <div className="mt-2 font-mono text-xs">
+                    <div className="mb-2 p-2 rounded bg-red-900/20">
+                      <p>Test {runResult.failed_at}: ❌ FAIL</p>
+                      <p>Input: {JSON.stringify(runResult.input)}</p>
+                      <p>Expected: {JSON.stringify(runResult.expected)}</p>
+                      <p>Got: {JSON.stringify(runResult.output)}</p>
+                      {runResult.error && <p>Error: {runResult.error}</p>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-green-400">
+                  <p className="font-semibold">
+                    All tests passed! ({runResult.passed_tests}/{runResult.total_tests})
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

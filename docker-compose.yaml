@@ -1,0 +1,10 @@
+services:
+  code-runner:
+    build:
+      dockerfile: Dockerfile
+    image: leet-code-runner
+    container_name: leet-code-runner
+    command: ["sh", "-c", "sleep infinity"]
+    volumes:
+      - ${PWD}/temp-execution:/app/temp-execution
+    working_dir: /app

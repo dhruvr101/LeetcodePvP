@@ -148,8 +148,10 @@ async def get_problem_by_id(problem_id: str):
     return problem
 
 from rooms import router as rooms_router
+from code_execution import router as code_router
 
 app.include_router(rooms_router)
+app.include_router(code_router)
 
 
 from socket_server import sio
