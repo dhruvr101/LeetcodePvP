@@ -3,10 +3,58 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 html {
     background-color: #1E1E1E;
     color: white;
     font-family: "Inter", sans-serif;
+}
+
+/* Custom Animations for Login/Signup */
+@keyframes float-code {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.2;
+  }
+  25% {
+    transform: translateY(-10px) translateX(5px);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-5px) translateX(-5px);
+    opacity: 0.25;
+  }
+  75% {
+    transform: translateY(-15px) translateX(3px);
+    opacity: 0.35;
+  }
+}
+
+@keyframes float-terminal {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translateY(-15px) translateX(8px) rotate(0.5deg);
+    opacity: 0.4;
+  }
+  50% {
+    transform: translateY(-8px) translateX(-5px) rotate(-0.5deg);
+    opacity: 0.35;
+  }
+  75% {
+    transform: translateY(-20px) translateX(3px) rotate(0.3deg);
+    opacity: 0.45;
+  }
+}
+
+.animate-float {
+  animation: float-code 10s ease-in-out infinite;
+}
+
+.animate-terminal-float {
+  animation: float-terminal 12s ease-in-out infinite;
 }
 
 :root {

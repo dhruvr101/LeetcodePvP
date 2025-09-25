@@ -11,17 +11,7 @@ function App() {
     <UserProvider>
       <RoomProvider>
         <Router>
-          <div
-            style={{
-              minHeight: "100vh",
-              background: "#000000",
-              margin: 0,
-              padding: 0,
-              fontFamily:
-                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-              color: "#00ff88",
-            }}
-          >
+          <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
             <Routes>
               <Route path="/" element={<Navigate to="/login" />} />
               <Route path="/login" element={<Login />} />
