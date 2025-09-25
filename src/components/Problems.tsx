@@ -56,45 +56,67 @@ const Problems = () => {
   // Fetch existing room on page load
   useEffect(() => {
     const fetchExistingRoom = async () => {
-      if (!user) return;
+      if (!user || !token) {
+        console.log("⏳ Skipping room fetch - user or token not ready:", { user: !!user, token: !!token });
+        return;
+      }
 
+      console.log("🔍 Fetching existing room for user:", user.id);
       try {
         const res = await axios.get(
           `http://127.0.0.1:8000/api/rooms/user/${user.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
+        console.log("📦 Room fetch result:", res.data);
         if (res.data) {
           setRoom(res.data);
+          console.log("✅ Room set:", res.data.code);
+        } else {
+          console.log("❌ No active room found");
         }
       } catch (err) {
         console.error("Error fetching existing room:", err);
       }
     };
     fetchExistingRoom();
-  }, [user]);
+  }, [user, token]);
 
   // Listen for room updates
   useEffect(() => {
     if (!socket) return;
     socket.on("room_update", (updatedRoom) => {
       console.log("📡 Room update received:", updatedRoom);
+      console.log("📊 Current room state:", room);
+      console.log("📊 User in updated room?", user ? updatedRoom.players?.some(p => p.id === user.id) : 'no user');
+
       // If room became inactive, clear it from state
       if (!updatedRoom.active) {
+        console.log("🚫 Clearing room - became inactive");
+        setRoom(null);
+      } else if (user && !updatedRoom.players?.some(p => p.id === user.id)) {
+        console.log("🚫 Clearing room - user not in player list");
         setRoom(null);
       } else {
+        console.log("🔄 Updating room state");
         setRoom(updatedRoom);
+        // If game started, redirect to problem detail page
+        if (updatedRoom.started && updatedRoom.problemId) {
+          console.log("🎮 Redirecting to problem page");
+          navigate(`/problems/${encodeURIComponent(updatedRoom.problemId)}`);
+        }
       }
     });
     return () => {
       socket.off("room_update");
     };
-  }, [socket]);
+  }, [socket, navigate, room, user]);
 
   // Join socket room when room state changes
   useEffect(() => {
     if (socket && room) {
+      console.log("➡️ Attempting to join socket.io room:", room.code);
       socket.emit("join_room", { roomCode: room.code });
-      console.log("➡️ Joined socket.io room:", room.code);
+      console.log("✅ Joined socket.io room:", room.code);
     }
   }, [socket, room]);
 
@@ -149,9 +171,20 @@ const Problems = () => {
     }
   };
 
-  const handleStartRoom = () => {
-    // TODO: Implement room start functionality
-    alert("Game starting! (Feature coming soon)");
+  const handleStartRoom = async () => {
+    if (!user || !room) return;
+
+    try {
+      await axios.post(
+        `http://127.0.0.1:8000/api/rooms/start?roomCode=${room.code}&hostUserId=${user.id}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Navigation will happen via room_update socket event
+    } catch (err) {
+      console.error("Error starting game:", err);
+      alert("Failed to start game. Please try again.");
+    }
   };
 
   const handleLogout = () => {

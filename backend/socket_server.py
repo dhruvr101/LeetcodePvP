@@ -13,6 +13,8 @@ async def connect(sid, environ):
 @sio.event
 async def disconnect(sid):
     print("❌ Client disconnected:", sid)
+    # Note: Room cleanup is handled by the HTTP leave endpoint
+    # Socket disconnection doesn't automatically remove from rooms
 
 @sio.on("join_room")
 async def handle_join_room(sid, data):
@@ -22,16 +24,28 @@ async def handle_join_room(sid, data):
         await sio.enter_room(sid, room_code)
         print(f"✅ {sid} joined room {room_code}")
 
-        # Send the current room state to this client and all others in the room
-        # This ensures everyone has the latest room state when someone joins
+        # Only send current room state to the specific client that just joined
+        # Don't broadcast to everyone unless there was an actual room change
         from main import db
         room = db.rooms.find_one({"code": room_code})
         if room:
+            print(f"📡 Sending room state to new client for {room_code}: {room.get('players', [])}")
             room["_id"] = str(room["_id"])
             # Convert datetime to ISO string for JSON serialization
             if "created_at" in room:
                 room["created_at"] = room["created_at"].isoformat()
-            await broadcast_room_update(room)
+            # Send only to the client that just joined, not to everyone
+            await sio.emit("room_update", room, to=sid)
+        else:
+            print(f"❌ Room {room_code} not found in database")
+
+@sio.on("leave_room")
+async def handle_leave_room(sid, data):
+    """Client explicitly leaves a socket.io room by code"""
+    room_code = data.get("roomCode")
+    if room_code:
+        await sio.leave_room(sid, room_code)
+        print(f"❌ {sid} left room {room_code}")
 
 async def broadcast_room_update(room: dict):
     """Send the latest room state to all clients in that room"""
