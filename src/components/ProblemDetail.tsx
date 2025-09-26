@@ -30,7 +30,6 @@ const ProblemDetail = () => {
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
 
-  // Fetch problem from backend
   useEffect(() => {
     const fetchProblem = async () => {
       try {
@@ -51,12 +50,10 @@ const ProblemDetail = () => {
     fetchProblem();
   }, [decodedTitle]);
 
-  // Listen for live room updates
   useEffect(() => {
     if (!socket) return;
     socket.on("room_update", (updatedRoom) => {
       console.log("📡 Got room update:", updatedRoom);
-      // If room became inactive, clear it from state
       if (!updatedRoom.active) {
         setRoom(null);
       } else {
@@ -68,14 +65,12 @@ const ProblemDetail = () => {
     };
   }, [socket]);
 
-    // Join the socket.io room after creating or joining
   useEffect(() => {
     if (socket && room) {
       socket.emit("join_room", { roomCode: room.code });
       console.log("➡️ Joined socket.io room:", room.code);
     }
   }, [socket, room]);
-
 
   const handleCreateRoom = async () => {
     if (!user) {
@@ -89,7 +84,6 @@ const ProblemDetail = () => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // Only set initial room, updates will come via socket
       setRoom(res.data);
     } catch (err) {
       console.error("Error creating room:", err);
@@ -117,7 +111,6 @@ const ProblemDetail = () => {
 
       setRunResult(res.data);
 
-      // If it's a submit and user completed the problem
       if (isSubmit && res.data.all_passed && room) {
         setShowCompletionBanner(true);
         setTimeout(() => setShowCompletionBanner(false), 5000);
@@ -129,7 +122,6 @@ const ProblemDetail = () => {
       setIsRunning(false);
     }
   };
-
 
   if (loading) {
     return (
@@ -155,7 +147,8 @@ const ProblemDetail = () => {
           🎉 Congratulations! You completed the problem! 🎉
         </div>
       )}
-      {/* Leaderboard - Fixed position corner overlay when game is active */}
+
+      {/* Room Section */}
       {room && room.started && (
         <div className="fixed top-4 right-4 w-64 bg-[#1A1A1A] border border-gray-600 rounded-lg p-4 shadow-xl z-50">
           <h2 className="text-lg font-semibold mb-3 text-white border-b border-gray-600 pb-2">
@@ -192,34 +185,10 @@ const ProblemDetail = () => {
               </div>
             ))}
           </div>
-          <button
-            onClick={async () => {
-              if (!user || !room) return;
-              try {
-                await axios.post(
-                  `http://127.0.0.1:8000/api/rooms/leave?roomCode=${room.code}&userId=${user.id}`,
-                  {},
-                  { headers: { Authorization: `Bearer ${token}` } }
-                );
-                // Leave the socket room as well
-                if (socket) {
-                  socket.emit("leave_room", { roomCode: room.code });
-                }
-                setRoom(null);
-                // Navigate back to problems page
-                navigate("/problems");
-              } catch (err) {
-                console.error("Error leaving room:", err);
-              }
-            }}
-            className="w-full bg-red-600 hover:bg-red-700 px-3 py-2 rounded text-white text-sm font-medium transition-colors"
-          >
-            Leave Room
-          </button>
         </div>
       )}
 
-      {/* Left: Problem description */}
+      {/* Left: Problem Description */}
       <div className="w-1/2 border-r border-gray-700 p-8 overflow-y-auto bg-[#252525]">
         <Link
           to="/problems"
@@ -248,6 +217,7 @@ const ProblemDetail = () => {
           {problem.description}
         </p>
 
+        {/* Test Cases */}
         <h2 className="text-2xl font-semibold mt-10 mb-5 border-b border-gray-600 pb-2 text-white">
           Test Cases
         </h2>
@@ -273,7 +243,7 @@ const ProblemDetail = () => {
           ))}
         </ul>
 
-        {/* Room Section - Only show if room exists and game hasn't started */}
+        {/* Room Controls */}
         {!room?.started && (
           <div className="mt-8">
             {!room ? (
@@ -357,7 +327,6 @@ const ProblemDetail = () => {
                             { headers: { Authorization: `Bearer ${token}` } }
                           );
                           setRoom(null);
-                          // Navigate back to problems page
                           navigate("/problems");
                         } catch (err) {
                           console.error("Error leaving room:", err);
@@ -375,7 +344,7 @@ const ProblemDetail = () => {
         )}
       </div>
 
-      {/* Right: Editor */}
+      {/* Right: Code Editor */}
       <div className="w-1/2 p-6 bg-[#1E1E1E] flex flex-col">
         <div className="bg-[#2D2D2D] border border-gray-600 rounded-lg flex-grow flex flex-col shadow-lg">
           <div className="p-4 border-b border-gray-600 flex justify-between items-center">
@@ -412,7 +381,7 @@ const ProblemDetail = () => {
               }}
             />
           </div>
-          {/* Results section */}
+          {/* Results Section */}
           {runResult && (
             <div className="p-4 border-t border-gray-600 bg-[#1A1A1A] max-h-48 overflow-y-auto">
               {runResult.error ? (

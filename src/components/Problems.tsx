@@ -13,20 +13,6 @@ interface Problem {
   status?: "solved" | "attempted" | "none";
 }
 
-type Sort = "" | "asc" | "des";
-interface SortOptions {
-  title: Sort;
-  difficulty: Sort;
-}
-
-function kebabToSpacedPascal(str: string): string {
-  if (!str) return "";
-  return str
-    .split("-")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-}
-
 const Problems = () => {
   const [data, setData] = useState<Problem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,7 +39,6 @@ const Problems = () => {
     fetchProblems();
   }, []);
 
-  // Fetch existing room on page load
   useEffect(() => {
     const fetchExistingRoom = async () => {
       if (!user || !token) {
@@ -61,16 +46,13 @@ const Problems = () => {
         return;
       }
 
-      console.log("🔍 Fetching existing room for user:", user.id);
       try {
         const res = await axios.get(
           `http://127.0.0.1:8000/api/rooms/user/${user.id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log("📦 Room fetch result:", res.data);
         if (res.data) {
           setRoom(res.data);
-          console.log("✅ Room set:", res.data.code);
         } else {
           console.log("❌ No active room found");
         }
@@ -81,27 +63,14 @@ const Problems = () => {
     fetchExistingRoom();
   }, [user, token]);
 
-  // Listen for room updates
   useEffect(() => {
     if (!socket) return;
     socket.on("room_update", (updatedRoom) => {
-      console.log("📡 Room update received:", updatedRoom);
-      console.log("📊 Current room state:", room);
-      console.log("📊 User in updated room?", user ? updatedRoom.players?.some(p => p.id === user.id) : 'no user');
-
-      // If room became inactive, clear it from state
       if (!updatedRoom.active) {
-        console.log("🚫 Clearing room - became inactive");
-        setRoom(null);
-      } else if (user && !updatedRoom.players?.some(p => p.id === user.id)) {
-        console.log("🚫 Clearing room - user not in player list");
         setRoom(null);
       } else {
-        console.log("🔄 Updating room state");
         setRoom(updatedRoom);
-        // If game started, redirect to problem detail page
         if (updatedRoom.started && updatedRoom.problemId) {
-          console.log("🎮 Redirecting to problem page");
           navigate(`/problems/${encodeURIComponent(updatedRoom.problemId)}`);
         }
       }
@@ -111,12 +80,9 @@ const Problems = () => {
     };
   }, [socket, navigate, room, user]);
 
-  // Join socket room when room state changes
   useEffect(() => {
     if (socket && room) {
-      console.log("➡️ Attempting to join socket.io room:", room.code);
       socket.emit("join_room", { roomCode: room.code });
-      console.log("✅ Joined socket.io room:", room.code);
     }
   }, [socket, room]);
 
@@ -126,9 +92,9 @@ const Problems = () => {
       return;
     }
 
+    const code = prompt("Enter Room Code");
+    if (!code) return;
     try {
-      const code = prompt("Enter Room Code");
-      if (!code) return;
       const res = await axios.post(
         `http://127.0.0.1:8000/api/rooms/join?roomCode=${code}&userId=${user.id}&username=${user.email}`,
         {},
@@ -156,43 +122,10 @@ const Problems = () => {
     }
   };
 
-  const handleCancelRoom = async () => {
-    if (!user || !room) return;
-
-    try {
-      await axios.post(
-        `http://127.0.0.1:8000/api/rooms/cancel?roomCode=${room.code}&hostUserId=${user.id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setRoom(null);
-    } catch (err) {
-      console.error("Error canceling room:", err);
-    }
-  };
-
-  const handleStartRoom = async () => {
-    if (!user || !room) return;
-
-    try {
-      await axios.post(
-        `http://127.0.0.1:8000/api/rooms/start?roomCode=${room.code}&hostUserId=${user.id}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      // Navigation will happen via room_update socket event
-    } catch (err) {
-      console.error("Error starting game:", err);
-      alert("Failed to start game. Please try again.");
-    }
-  };
-
   const handleLogout = () => {
     logout();
     navigate("/login");
   };
-
-  const isHost = room && user && room.hostId === user.id;
 
   const filteredData = data.filter((p) =>
     p.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -207,33 +140,34 @@ const Problems = () => {
   }
 
   return (
-    <div className="w-full min-h-screen bg-[#1E1E1E] text-gray-100 px-6 py-10">
-      <div className="max-w-6xl mx-auto">
-        {/* Header with Profile */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-white">Problem Set</h1>
-
+    <div className="w-full min-h-screen bg-[#0A0A0A] text-white px-4 py-10">
+      <div className="max-w-4xl mx-auto">
+        {/* Header with Profile and Settings Icon */}
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-semibold">PeetCode</h1>
+          
           <div className="flex items-center gap-4">
-            {/* User Profile */}
-            {user && (
-              <div className="flex items-center gap-3">
-                <span className="text-gray-300">
-                  Welcome, <span className="text-white font-medium">{user.email}</span>
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-white text-sm transition-colors"
-                >
-                  Logout
-                </button>
+            {/* Settings Icon */}
+            <div className="relative group">
+              <button
+                className="p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition-all"
+                onClick={() => {}}
+              >
+                ⚙️
+              </button>
+              <div className="absolute top-0 right-0 mt-10 bg-gray-800 text-white text-sm rounded-md shadow-lg p-3 w-48 opacity-0 group-hover:opacity-100 transition-all">
+                <div className="flex justify-between items-center">
+                  <span>{user?.email}</span>
+                </div>
+                <button onClick={handleLogout} className="text-red-600 mt-2 w-full text-center">Logout</button>
               </div>
-            )}
+            </div>
 
-            {/* Global Join Room Button */}
+            {/* Join Room Button */}
             {!room && (
               <button
                 onClick={handleJoinRoom}
-                className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-white font-medium transition-colors"
+                className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-3 px-6 rounded-full hover:bg-gradient-to-l transition-all duration-300"
               >
                 Join Room
               </button>
@@ -241,105 +175,48 @@ const Problems = () => {
           </div>
         </div>
 
-        {/* Room Status Section */}
-        {room && (
-          <div className="mb-6 p-4 bg-[#2A2A2A] rounded-lg border border-gray-600">
-            <div className="flex justify-between items-start">
-              <div>
-                <h2 className="text-xl font-semibold text-white mb-2">
-                  Room: {room.code}
-                </h2>
-
-                {isHost ? (
-                  <div>
-                    <p className="text-gray-300 mb-3">Players in room:</p>
-                    <ul className="mb-4 space-y-1">
-                      {room.players.map((player) => (
-                        <li key={player.id} className="text-gray-200">
-                          • {player.name} {player.id === room.hostId && "(Host)"}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleStartRoom}
-                        className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-medium transition-colors"
-                      >
-                        Start Game
-                      </button>
-                      <button
-                        onClick={handleCancelRoom}
-                        className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded text-white font-medium transition-colors"
-                      >
-                        Cancel Room
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="text-gray-300 mb-2">
-                      Waiting for host to start... ({room.players.length} players)
-                    </p>
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-4 h-4 bg-orange-500 rounded-full animate-pulse"></div>
-                      <span className="text-orange-400">Ready to play</span>
-                    </div>
-                    <button
-                      onClick={handleLeaveRoom}
-                      className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded text-white font-medium transition-colors"
-                    >
-                      Leave Room
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
+        {/* Search Bar */}
         <div className="mb-6">
           <input
             type="text"
             placeholder="Search problems..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-3 bg-[#141414] border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-4 py-3 bg-[#333] border border-[#444] rounded-lg text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
           />
         </div>
 
-        {filteredData.length > 0 ? (
-          filteredData.map((main, idx) => (
-            <div
-              key={main._id}
-              className="h-[40px] w-full text-[14px] mb-3 rounded-md border border-transparent hover:bg-[#2A2A2A] hover:border-gray-600 transition duration-200"
-            >
-              <Link
-                to={`/problems/${encodeURIComponent(main.title)}`}
-                className="w-full h-[40px] flex flex-row whitespace-nowrap"
+        {/* Problem List */}
+        <div className="space-y-4">
+          {filteredData.length > 0 ? (
+            filteredData.map((problem, idx) => (
+              <div
+                key={problem._id}
+                className="flex justify-between items-center bg-[#0A0A0A] p-4 rounded-lg hover:bg-[#222] border-b border-[#333] transition-all duration-200"
               >
-                <div className="flex-grow ml-[20px]">
-                  {idx + 1}. {kebabToSpacedPascal(main.title)}
-                </div>
-
+                <Link
+                  to={`/problems/${encodeURIComponent(problem.title)}`}
+                  className="text-white text-md font-medium"
+                >
+                  {idx + 1}. {problem.title}
+                </Link>
                 <div
-                  className={`w-[100px] text-center ${
-                    main.difficulty === "Easy"
-                      ? "text-green-500"
-                      : main.difficulty === "Medium"
-                      ? "text-orange-500"
-                      : "text-red-500"
+                  className={`text-sm text-center ${
+                    problem.difficulty === "Easy"
+                      ? "text-green-400"
+                      : problem.difficulty === "Medium"
+                      ? "text-orange-400"
+                      : "text-red-400"
                   }`}
                 >
-                  {main.difficulty}
+                  {problem.difficulty}
                 </div>
-              </Link>
-            </div>
-          ))
-        ) : (
-          <div className="text-[14px] ml-[30px] text-red-600 h-[40px] leading-[40px]">
-            Problem not found
-          </div>
-        )}
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-white">No problems found</div>
+          )}
+        </div>
       </div>
     </div>
   );
