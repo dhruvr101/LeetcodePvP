@@ -11,7 +11,8 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from main import db, get_current_user
+from database import db
+from auth import get_current_user
 
 router = APIRouter(prefix="/api/code", tags=["code"])
 
@@ -382,10 +383,23 @@ async def update_room_completion(room_code: str, user_id: str):
             player["completedAt"] = datetime.utcnow().isoformat()
             break
 
+    # Check if everyone has completed now
+    all_completed = all(player.get("completed", False) for player in room["players"])
+
+    update_data = {"players": room["players"]}
+
+    # If everyone completed for the first time, mark room as finished
+    if all_completed and not room.get("gameCompleted"):
+        print(f"🏁 Game completed for room {room_code}! Marking as finished.")
+        update_data["gameCompleted"] = True
+        update_data["active"] = False  # Close the room
+        room["gameCompleted"] = True
+        room["active"] = False
+
     # Update database
     db.rooms.update_one(
         {"_id": room["_id"]},
-        {"$set": {"players": room["players"]}}
+        {"$set": update_data}
     )
 
     # Broadcast update

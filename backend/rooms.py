@@ -3,8 +3,8 @@ from bson import ObjectId
 from datetime import datetime
 import random
 import string
-from main import db, get_current_user
-
+from database import db
+from auth import get_current_user
 from socket_server import broadcast_room_update
 
 router = APIRouter(prefix="/api/rooms", tags=["rooms"])

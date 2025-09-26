@@ -49,4 +49,7 @@ async def handle_leave_room(sid, data):
 
 async def broadcast_room_update(room: dict):
     """Send the latest room state to all clients in that room"""
+    print(f"📡 Broadcasting room update to room {room['code']}")
+    print(f"📡 Room players: {room.get('players', [])}")
     await sio.emit("room_update", room, to=room["code"])
+    print(f"📡 Room update broadcasted successfully")

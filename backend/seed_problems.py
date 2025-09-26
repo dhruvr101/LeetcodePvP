@@ -146,74 +146,89 @@ def generate_median_sorted_arrays_cases(n_cases=100):
 # ---------------------------
 function_templates = {
     "Two Sum": '''def twoSum(nums, target):
-    num_map = {}
-    for i, num in enumerate(nums):
-        complement = target - num
-        if complement in num_map:
-            return [num_map[complement], i]
-        num_map[num] = i
-    return None''',
+    """
+    Given an array of integers nums and an integer target,
+    return indices of the two numbers such that they add up to target.
+    """
+    # Your solution here
+    pass''',
 
     "Reverse String": '''def reverseString(s):
-    return s[::-1]''',
+    """
+    Write a function that reverses a string.
+    """
+    # Your solution here
+    pass''',
 
     "Valid Parentheses": '''def isValid(s):
-    stack = []
-    mapping = {')':'(', ']':'[', '}':'{'}
-    for ch in s:
-        if ch in mapping.values():
-            stack.append(ch)
-        elif ch in mapping:
-            if not stack or stack[-1] != mapping[ch]:
-                return False
-            stack.pop()
-    return not stack''',
+    """
+    Given a string s containing just the characters '(', ')', '{', '}', '[' and ']',
+    determine if the input string is valid.
+    """
+    # Your solution here
+    pass''',
 
     "Merge Two Sorted Lists": '''def mergeTwoLists(list1, list2):
-    return sorted(list1 + list2)''',
+    """
+    You are given the heads of two sorted linked lists list1 and list2.
+    Merge the two lists in a sorted order and return it as a new sorted list.
+    """
+    # Your solution here
+    pass''',
 
     "Maximum Subarray": '''def maxSubArray(nums):
-    max_sum = curr = nums[0]
-    for n in nums[1:]:
-        curr = max(n, curr + n)
-        max_sum = max(max_sum, curr)
-    return max_sum''',
+    """
+    Given an integer array nums, find the contiguous subarray
+    which has the largest sum and return its sum.
+    """
+    # Your solution here
+    pass''',
 
     "Climbing Stairs": '''def climbStairs(n):
-    a, b = 1, 1
-    for _ in range(n):
-        a, b = b, a + b
-    return a''',
+    """
+    You are climbing a staircase. It takes n steps to reach the top.
+    Each time you can either climb 1 or 2 steps.
+    In how many distinct ways can you climb to the top?
+    """
+    # Your solution here
+    pass''',
 
     "Search in Rotated Sorted Array": '''def search(nums, target):
-    try:
-        return nums.index(target)
-    except ValueError:
-        return None''',
+    """
+    There is an integer array nums sorted in ascending order (with distinct values).
+    Prior to being passed to your function, nums is possibly rotated.
+    Given the array nums after the possible rotation and an integer target,
+    return the index of target if it is in nums, or -1 if it is not in nums.
+    """
+    # Your solution here
+    pass''',
 
     "Longest Substring Without Repeating Characters": '''def lengthOfLongestSubstring(s):
-    seen, left, max_len = {}, 0, 0
-    for right, ch in enumerate(s):
-        if ch in seen and seen[ch] >= left:
-            left = seen[ch] + 1
-        seen[ch] = right
-        max_len = max(max_len, right - left + 1)
-    return max_len''',
+    """
+    Given a string s, find the length of the longest substring
+    without repeating characters.
+    """
+    # Your solution here
+    pass''',
 
     "Container With Most Water": '''def maxArea(height):
-    l, r, max_area = 0, len(height) - 1, 0
-    while l < r:
-        max_area = max(max_area, (r - l) * min(height[l], height[r]))
-        if height[l] < height[r]:
-            l += 1
-        else:
-            r -= 1
-    return max_area''',
+    """
+    You are given an integer array height of length n.
+    There are n vertical lines drawn such that the two endpoints of the ith line
+    are (i, 0) and (i, height[i]).
+    Find two lines that together with the x-axis form a container that contains the most water.
+    Return the maximum amount of water a container can store.
+    """
+    # Your solution here
+    pass''',
 
     "Median of Two Sorted Arrays": '''def findMedianSortedArrays(nums1, nums2):
-    combined = sorted(nums1 + nums2)
-    n = len(combined)
-    return combined[n // 2] if n % 2 == 1 else (combined[n // 2 - 1] + combined[n // 2]) / 2.0'''
+    """
+    Given two sorted arrays nums1 and nums2 of size m and n respectively,
+    return the median of the two sorted arrays.
+    """
+    # Your solution here
+    pass'''
 }
 
 # ---------------------------

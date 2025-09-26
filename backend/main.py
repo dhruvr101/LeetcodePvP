@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
-from pymongo import MongoClient
+from database import db
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -17,7 +17,7 @@ from fastapi import Path
 load_dotenv()
 
 MONGO_URI = os.getenv("MONGO_URI")
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = os.getenv("SECRET_KEY", "leet-code-secret-key")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
@@ -26,23 +26,18 @@ app = FastAPI()
 # Enable CORS for React (5173 = Vite, 3000 = CRA)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
 )
 
-# MongoDB connection
+# MongoDB connection is handled in database.py
+users_collection = db.users
 try:
-    client = MongoClient(MONGO_URI)
-    client.admin.command('ping')
-    print("✅ Connected to MongoDB")
-
-    db = client.auth_db
-    users_collection = db.users
     users_collection.create_index([("email", 1)], unique=True)
-except Exception as e:
-    raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+except Exception:
+    pass  # Index may already exist
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -74,24 +69,8 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        email: str = payload.get("sub")
-        if email is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-    
-    user = users_collection.find_one({"email": email})
-    if user is None:
-        raise credentials_exception
-    return user
+# get_current_user function moved to auth.py
+from auth import get_current_user
 
 # Routes
 @app.post("/api/auth/signup", response_model=Token)

@@ -25,6 +25,10 @@ export default function Login() {
         { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
       );
 
+      if (!res.data.access_token) {
+        throw new Error("No access token received");
+      }
+
       localStorage.setItem("token", res.data.access_token);
       setSuccess("Login successful!");
 

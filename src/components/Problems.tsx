@@ -175,6 +175,70 @@ const Problems = () => {
           </div>
         </div>
 
+        {/* Room Status */}
+        {room && (
+          <div className="mb-6 p-4 bg-[#2A2A2A] border border-gray-600 rounded-lg">
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="text-lg font-semibold text-white">
+                🏠 Room: {room.code}
+              </h2>
+              <button
+                onClick={handleLeaveRoom}
+                className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-sm text-white transition-colors"
+              >
+                Leave Room
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Players List */}
+              <div>
+                <p className="text-gray-300 text-sm mb-2">Players ({room.players?.length || 0}):</p>
+                <ul className="space-y-1">
+                  {room.players?.map((player: any) => (
+                    <li key={player.id} className="flex items-center gap-2 text-sm">
+                      <span className="w-2 h-2 bg-green-400 rounded-full"></span>
+                      <span className="text-gray-200">
+                        {player.name}
+                        {room.hostId === player.id && (
+                          <span className="ml-1 text-xs bg-blue-600 px-1 py-0.5 rounded">HOST</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Room Status */}
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  {room.started ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-green-400 text-sm font-medium">Game Started</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                      <span className="text-orange-400 text-sm font-medium">
+                        {user && room.hostId === user.id
+                          ? "You can start the game"
+                          : "Waiting for host to start"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {room.problemId && (
+                  <p className="text-gray-400 text-xs">
+                    Problem: <span className="text-blue-400">{decodeURIComponent(room.problemId)}</span>
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Search Bar */}
         <div className="mb-6">
           <input
