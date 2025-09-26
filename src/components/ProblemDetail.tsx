@@ -72,8 +72,8 @@ const ProblemDetail = () => {
           // Only show animation if:
           // 1. All players completed
           // 2. Game completion animation hasn't been processed yet
-          // 3. Room doesn't have gameCompleted flag (meaning this is the first time everyone completed)
-          if (allCompleted && !showGameEndModal && !gameEndProcessed && !updatedRoom.gameCompleted) {
+          // Note: We removed the gameCompleted check because we want to show animation BEFORE setting that flag
+          if (allCompleted && !showGameEndModal && !gameEndProcessed) {
             console.log("🎉 Showing game completion animation");
             // Show game end animation
             setShowGameEndModal(true);

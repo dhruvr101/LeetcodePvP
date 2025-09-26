@@ -383,24 +383,43 @@ async def update_room_completion(room_code: str, user_id: str):
             player["completedAt"] = datetime.utcnow().isoformat()
             break
 
+    # Always update player data first
+    db.rooms.update_one(
+        {"_id": room["_id"]},
+        {"$set": {"players": room["players"]}}
+    )
+
+    # Broadcast room update immediately so leaderboard updates in real-time
+    room["_id"] = str(room["_id"])
+    if "created_at" in room:
+        room["created_at"] = room["created_at"].isoformat()
+    # Import here to avoid circular imports
+    from socket_server import broadcast_room_update
+    await broadcast_room_update(room)
+    print(f"📡 Broadcasted immediate update for room {room_code} - player {user_id} completed")
+
     # Check if everyone has completed now
     all_completed = all(player.get("completed", False) for player in room["players"])
-
-    update_data = {"players": room["players"]}
 
     # If everyone completed for the first time, mark room as finished
     if all_completed and not room.get("gameCompleted"):
         print(f"🏁 Game completed for room {room_code}! Marking as finished.")
-        update_data["gameCompleted"] = True
-        update_data["active"] = False  # Close the room
+
+        # Update with game completion flags
+        db.rooms.update_one(
+            {"_id": room["_id"]},
+            {"$set": {"gameCompleted": True, "active": False}}
+        )
+
+        # Update room object for final broadcast
         room["gameCompleted"] = True
         room["active"] = False
 
-    # Update database
-    db.rooms.update_one(
-        {"_id": room["_id"]},
-        {"$set": update_data}
-    )
+        # Broadcast final game completed state
+        await broadcast_room_update(room)
+        print(f"📡 Broadcasted final game completion for room {room_code}")
+
+        return  # Exit early since we already broadcast
 
     # Broadcast update
     room["_id"] = str(room["_id"])
